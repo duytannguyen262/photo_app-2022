@@ -1,0 +1,14 @@
+.album {
+  &_photo-item {
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 10px;
+
+    & img {
+      transition: 0.3s ease-in-out;
+      &:hover {
+        transform: scale(1.2);
+      }
+    }
+  }
+}
