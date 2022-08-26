@@ -63,7 +63,7 @@ const Header = () => {
                     <li className="header-nav_item">
                       <button
                         className="btn btn-cta d-flex align-center gap-1"
-                        onClick={() => navigate("/upload")}
+                        onClick={() => navigate("/uploadMultiple")}
                       >
                         <UploadIcon
                           sx={{ color: "#fff", fontSize: "1.8rem" }}

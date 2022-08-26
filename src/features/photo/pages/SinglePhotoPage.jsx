@@ -1,83 +1,186 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import moment from "moment";
-// import { FormControlLabel, styled, Switch } from "@mui/material";
 
 import useAxiosPrivate from "../../../shared/hooks/useAxiosPrivate";
 import { OpenSeaDragonViewer } from "../components/OpenSeaDragonViewer";
 import { useSelector } from "react-redux";
+import {
+  Backdrop,
+  Box,
+  CircularProgress,
+  Fade,
+  Modal,
+  Typography,
+} from "@mui/material";
+import axios from "../../../api/axios";
+import PhotoShareBtn from "../components/PhotoShareBtn";
 
-// const PublicSwitch = styled(Switch)(({ theme }) => ({
-//   padding: 8,
-//   "& .MuiSwitch-track": {
-//     borderRadius: 22 / 2,
-//     "&:before, &:after": {
-//       content: '""',
-//       position: "absolute",
-//       top: "50%",
-//       transform: "translateY(-50%)",
-//       width: 16,
-//       height: 16,
-//     },
-//     "&:before": {
-//       backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 24 24"><path fill="${encodeURIComponent(
-//         theme.palette.getContrastText(theme.palette.primary.main)
-//       )}" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>')`,
-//       left: 12,
-//     },
-//     "&:after": {
-//       backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 24 24"><path fill="${encodeURIComponent(
-//         theme.palette.getContrastText(theme.palette.primary.main)
-//       )}" d="M19,13H5V11H19V13Z" /></svg>')`,
-//       right: 12,
-//     },
-//   },
-//   "& .MuiSwitch-thumb": {
-//     boxShadow: "none",
-//     width: 16,
-//     height: 16,
-//     margin: 2,
-//   },
-// }));
+const modalStyle = {
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 400,
+  bgcolor: "#f4c918",
+  color: "white",
+  boxShadow: 24,
+  borderRadius: "10px",
+  p: 3,
+};
 
-const SinglePhotoPage = () => {
+const SinglePhotoPage = (props) => {
+  const { state } = useLocation();
+  const tempAuthed = state?.tempAuthed || props?.tempAuthed;
   const user = useSelector((state) => state.auth.user);
-  const { photoId } = useParams();
+
+  const params = useParams();
+  const photoId = props?.photo?._id || params?.photoId;
+
   const axiosPrivate = useAxiosPrivate();
+  const navigate = useNavigate();
+
   const [photoInfo, setPhotoInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [resolution, setResolution] = useState("");
+  const [authed, setAuthed] = useState(false);
+
+  const [openModal, setOpenModal] = useState(false);
+  const openModalHandler = () => setOpenModal(true);
+  const closeModalHandler = () => setOpenModal(false);
 
   useEffect(() => {
     const getPhoto = async () => {
-      const res = await axiosPrivate.get(`photos/${photoId}/info`);
-      const { resolution } = res.data.data;
-      setPhotoInfo(res.data.data);
+      setIsLoading(true);
+
+      const res = await axios.get(`photos/${photoId}/info`);
+      //console.log(res?.data?.data);
+      const { resolution, sharedTo } = res?.data?.data;
+
+      setPhotoInfo(res?.data?.data);
       setResolution(resolution);
+
+      const shared = sharedTo.filter((sharedId) => sharedId === user?.userId);
+      shared.length > 0 && setAuthed(true);
+
+      setIsLoading(false);
     };
+
     getPhoto();
-  }, [axiosPrivate, photoId]);
+  }, [photoId, user]);
+
+  const deleteHandler = () => {
+    const deletePhoto = async () => {
+      await axiosPrivate.delete(`photos/${photoId}`);
+    };
+
+    try {
+      setIsLoading(true);
+      deletePhoto();
+      navigate("/library");
+    } catch (error) {
+      console.log(error);
+    }
+
+    setIsLoading(false);
+  };
+
+  const editPhotoHandler = () => {
+    navigate(`/photos/${photoId}/edit`);
+  };
 
   return (
     <div className="wrapper">
-      {user.userId === photoInfo?.author?.id ? (
+      {isLoading ? <div>Loading...</div> : null}
+      {!isLoading &&
+      (user?.userId === photoInfo?.author?.id || tempAuthed || authed) ? (
         <>
           <div>
             <h1 style={{ marginBottom: "0" }} className="page-title">
-              {photoInfo.name}
+              {photoInfo?.name}
             </h1>
             <p style={{ marginBottom: "2rem" }}>
-              by <strong>{photoInfo.author.name}</strong>
+              by <strong>{photoInfo?.author.name}</strong>
             </p>
             <p>
-              <strong>Resolution:</strong> {photoInfo.resolution}
+              <strong>Resolution:</strong> {photoInfo?.resolution}
             </p>
             <p>
               <strong>Album:</strong>{" "}
-              {photoInfo.ofAlbums.map((album) => album.name).join(", ")}
+              {photoInfo?.ofAlbums.map((album) => album.name).join(", ")}
             </p>
-            <p>
-              <strong>Uploaded:</strong> {moment(photoInfo.createdAt).fromNow()}
+            <p className="mb-1">
+              <strong>Uploaded:</strong>{" "}
+              {moment(photoInfo?.createdAt).fromNow()}
             </p>
+            {user && user.userId === photoInfo?.author?.id && (
+              <div className="d-flex align-center gap-1">
+                <PhotoShareBtn photo={photoInfo} />
+
+                <button
+                  className="btn btn-cta yellow"
+                  onClick={editPhotoHandler}
+                >
+                  Edit
+                </button>
+
+                <button className="btn btn-cta" onClick={openModalHandler}>
+                  <span>Delete</span>
+                </button>
+                <Modal
+                  aria-labelledby="transition-modal-title"
+                  aria-describedby="transition-modal-description"
+                  open={openModal}
+                  onClose={closeModalHandler}
+                  closeAfterTransition
+                  BackdropComponent={Backdrop}
+                  BackdropProps={{
+                    timeout: 500,
+                  }}
+                >
+                  <Fade in={openModal}>
+                    <Box sx={modalStyle}>
+                      <Typography
+                        id="transition-modal-title"
+                        variant="h4"
+                        component="h2"
+                      >
+                        Alert
+                      </Typography>
+                      <Typography
+                        id="transition-modal-description"
+                        sx={{ my: 2, fontSize: "1.6rem" }}
+                      >
+                        Are you sure you want to delete this photo?
+                      </Typography>
+                      <Typography>
+                        <button
+                          className="btn btn-cta mr-1"
+                          onClick={deleteHandler}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <CircularProgress
+                              sx={{ color: "white" }}
+                              size={18}
+                              alt=""
+                            />
+                          ) : (
+                            "Delete"
+                          )}
+                        </button>
+                        <button
+                          className="btn btn-outline"
+                          onClick={closeModalHandler}
+                        >
+                          <span>Cancel</span>
+                        </button>
+                      </Typography>
+                    </Box>
+                  </Fade>
+                </Modal>
+              </div>
+            )}
           </div>
           {resolution && (
             <OpenSeaDragonViewer

@@ -3,7 +3,6 @@ import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 
 import authReducer from "../features/user/auth/authSlice";
-import albumReducer from "../features/photo/albumSlice";
 
 const persistConfig = {
   key: "root",
@@ -11,7 +10,7 @@ const persistConfig = {
   whitelist: ["auth"],
 };
 
-const rootReducer = combineReducers({ auth: authReducer, album: albumReducer });
+const rootReducer = combineReducers({ auth: authReducer });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

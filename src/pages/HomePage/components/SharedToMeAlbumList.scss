@@ -1,0 +1,25 @@
+.folder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+
+  background-color: #fff8bc;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+
+  cursor: pointer;
+
+  transition: all 0.1s linear;
+  &:hover {
+    background-color: #ffe898;
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+
+  &-author {
+    font-size: 1rem;
+  }
+}

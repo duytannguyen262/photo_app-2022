@@ -8,7 +8,7 @@ import StyledLoadingButton from "../../../shared/components/StyledLoadingButton"
 
 import useAxiosPrivate from "../../../shared/hooks/useAxiosPrivate";
 
-const AlbumForm = ({ setOpen, albums, setAlbums }) => {
+const SearchBtn = ({ setOpen, albums, setAlbums }) => {
   const user = useSelector((state) => state.auth.user);
   const initData = {
     name: "",
@@ -79,4 +79,4 @@ const AlbumForm = ({ setOpen, albums, setAlbums }) => {
   );
 };
 
-export default AlbumForm;
+export default SearchBtn;

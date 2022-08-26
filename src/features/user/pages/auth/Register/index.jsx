@@ -63,6 +63,7 @@ const RegisterPage = () => {
   };
   const validate = Yup.object({
     email: Yup.string().required("Email is required"),
+    name: Yup.string().max(10, "Please enter less than 10 characters"),
     password: Yup.string().required("Password must not be empty"),
     confirmPassword: Yup.string().required(
       "Confirm Password must not be empty"

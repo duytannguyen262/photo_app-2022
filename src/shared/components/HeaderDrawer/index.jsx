@@ -52,7 +52,7 @@ const HeaderDrawer = ({ open, setOpen, user }) => {
                 <ListItemButton
                   onClick={() => {
                     setOpen(false);
-                    navigate("/upload");
+                    navigate("/uploadMultiple");
                   }}
                   sx={{ borderRadius: "8px" }}
                 >

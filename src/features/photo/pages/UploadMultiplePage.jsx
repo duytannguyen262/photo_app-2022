@@ -5,34 +5,33 @@ import * as Yup from "yup";
 import { CircularProgress, List, ListItem } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import FolderIcon from "@mui/icons-material/Folder";
+import AddAPhotoIcon from "@mui/icons-material/AddAPhoto";
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
 
 import InputField from "../../../shared/components/InputField";
 import useAxiosPrivate from "../../../shared/hooks/useAxiosPrivate";
 import axios from "../../../api/axios";
+import PreviewFile from "../components/PreviewFile";
 import "./UploadPage.scss";
 
-const UploadPage = () => {
+const UploadMultiplePage = () => {
   const { albumId } = useParams();
   const user = useSelector((state) => state.auth.user);
 
   const axiosPrivate = useAxiosPrivate();
   const filePickerRef = useRef();
-  const imgRef = useRef();
 
   const [data, setData] = useState({
-    file: null,
-    name: "",
+    files: null,
+    filesInfos: [],
     album: albumId,
     albumName: "",
-    size: "",
     ofAlbums: [],
   });
 
   const [currentAlbum, setCurrentAlbum] = useState(null);
   const [currentAlbums, setCurrentAlbums] = useState([]);
-  const [previewUrl, setPreviewUrl] = useState();
   const [isLoading, setIsLoading] = useState(false);
   const [searchedAlbums, setSearchedAlbums] = useState([]);
 
@@ -46,39 +45,28 @@ const UploadPage = () => {
     if (albumId) {
       getAlbum();
     }
-    if (!data.file) {
-      setPreviewUrl(null);
-      return;
-    }
-    const fileReader = new FileReader();
-    fileReader.onload = () => {
-      setPreviewUrl(fileReader.result);
-    };
-    fileReader.readAsDataURL(data.file);
-  }, [albumId, axiosPrivate, data.file]);
+  }, [albumId, axiosPrivate]);
 
   const submitHandler = async (submitedData) => {
     setIsLoading(true);
-    const { name, file, album } = submitedData;
+    const { files, album } = submitedData;
     if (!album && currentAlbums.length === 0) {
       setIsLoading(false);
       return;
     }
     const formData = new FormData();
-    formData.append("photo", file);
-    formData.append("authorId", user.userId);
-    formData.append("authorName", user.name);
-    formData.append("name", name);
+    [...files].forEach((file) => {
+      formData.append("photos", file);
+    });
+    data.filesInfos.forEach((fileInfo) =>
+      formData.append("photosInfos", JSON.stringify(fileInfo))
+    );
     if (album) formData.append("ofAlbum", album);
     if (currentAlbums) formData.append("ofAlbums", currentAlbums);
-    formData.append(
-      "resolution",
-      `${imgRef.current.naturalWidth}x${imgRef.current.naturalHeight}`
-    );
 
     try {
       await axiosPrivate.post(
-        `http://localhost:5000/api/photos/upload`,
+        `http://localhost:5000/api/photos/uploadMultiple`,
         formData
       );
 
@@ -90,11 +78,6 @@ const UploadPage = () => {
         pauseOnHover: true,
         draggable: true,
         progress: undefined,
-      });
-
-      setData({
-        file: null,
-        ...data,
       });
 
       navigate("/library");
@@ -114,11 +97,18 @@ const UploadPage = () => {
   };
 
   const pickedHandler = (e) => {
-    if (e?.target?.files?.length === 1) {
-      const pickedFile = e.target.files[0];
+    if (e?.target?.files?.length > 0) {
+      const pickedFiles = e.target.files;
+      const photoNames = [...pickedFiles].map((file) => file.name);
       setData({
         ...data,
-        file: pickedFile,
+        files: pickedFiles,
+        filesInfos: photoNames.map((photoName) => {
+          return {
+            name: photoName,
+            newName: "",
+          };
+        }),
       });
     } else {
       console.log("No file picked");
@@ -140,9 +130,7 @@ const UploadPage = () => {
     }
   };
 
-  const validate = Yup.object({
-    name: Yup.string().required("Name is required"),
-  });
+  const validate = Yup.object({});
 
   return (
     <div className="wrapper">
@@ -157,19 +145,14 @@ const UploadPage = () => {
             {({ setFieldValue }) => {
               return (
                 <Form style={{ width: "60%" }}>
-                  {previewUrl ? (
-                    <img ref={imgRef} src={previewUrl} alt="preview" />
-                  ) : (
-                    <p>Please pick an image</p>
-                  )}
-
                   <input
                     ref={filePickerRef}
                     type="file"
                     accept=".jpg,.png,.jpeg"
+                    multiple
                     style={{ display: "none" }}
                     onChange={(e) => {
-                      setFieldValue("file", e.target.files[0]);
+                      setFieldValue("files", e.target.files);
                       pickedHandler(e);
                     }}
                     name="file"
@@ -178,19 +161,24 @@ const UploadPage = () => {
 
                   <button
                     type="button"
-                    className="btn btn-cta"
+                    className="btn btn-cta d-flex align-center gap-1"
                     onClick={pickImageHandler}
                   >
-                    Choose an image
+                    <AddAPhotoIcon sx={{ color: "#fff", fontSize: "2rem" }} />
+                    <span>Add</span>
                   </button>
-
-                  <FastField
-                    component={InputField}
-                    placeholder="Enter your photo name"
-                    label="Photo name"
-                    type="text"
-                    name="name"
-                  />
+                  {data?.files &&
+                    [...data.files].map((file, i) => {
+                      return (
+                        <PreviewFile
+                          key={i}
+                          previewFile={file}
+                          setData={setData}
+                          setFieldValue={setFieldValue}
+                          data={data}
+                        />
+                      );
+                    })}
 
                   {!albumId && (
                     <FastField
@@ -201,7 +189,10 @@ const UploadPage = () => {
                           const res = await axios.get(
                             `/albums/search/${e.target.value}`
                           );
-                          setSearchedAlbums(res.data.albums);
+                          const ownedAlbums = res.data.albums.filter(
+                            (album) => album.author.id === user.userId
+                          );
+                          setSearchedAlbums(ownedAlbums);
                         }
                       }}
                       placeholder="Enter your album name"
@@ -261,4 +252,4 @@ const UploadPage = () => {
   );
 };
 
-export default UploadPage;
+export default UploadMultiplePage;

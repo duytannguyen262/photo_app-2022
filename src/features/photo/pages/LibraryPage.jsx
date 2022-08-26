@@ -8,7 +8,6 @@ import FolderIcon from "@mui/icons-material/Folder";
 import { logout } from "../../../features/user/auth/authSlice";
 import useAxiosPrivate from "../../../shared/hooks/useAxiosPrivate";
 import NewAlbumForm from "../components/NewAlbumForm";
-import { addCurrentAlbum } from "../albumSlice";
 import "./LibraryPage.scss";
 
 const LibraryPage = () => {
@@ -46,6 +45,7 @@ const LibraryPage = () => {
     <div className="wrapper">
       <div className="d-flex align-center gap-2 mb-1">
         <h1 className="page-title">Your Library</h1>
+
         <button
           className="btn btn-cta d-flex align-center gap-1"
           onClick={() => setOpen(true)}
@@ -71,15 +71,13 @@ const LibraryPage = () => {
         {albums?.length > 0 &&
           albums.map((album) => {
             if (album.author.id !== user.userId) {
-              console.log("not your album");
+              return null;
             }
             return (
               <div
                 className="library_folder"
                 key={album._id}
                 onClick={() => {
-                  const action = addCurrentAlbum(album);
-                  dispatch(action);
                   navigate(`/albums/${album._id}/photos`);
                 }}
               >
